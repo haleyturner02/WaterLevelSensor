@@ -4,8 +4,7 @@ int Rx_Command = 0;
 
 volatile int j = 0;
 volatile char packet[] = {0x0A, 0x0A, 0x0A, 0x0A, 0x0A};    // 5 byte packet - {Locked, Level, 3 bytes for measured level}
-//volatile char packet[] = {0x0A, 0x0A};
-//volatile char packet[]= {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07};     // 7 byte packet for receiving
+//volatile char packet[] = {0x0A, 0x0A, 0x0A, 0x0A, 0x0A, 0x0A};
 
 volatile int action_select = 0;
 volatile int ms_thresh, ms_count, ms_flag;
@@ -15,7 +14,7 @@ void initI2C_slave(){
     UCB0CTLW0 |= UCMODE_3 | UCSYNC;     // Put into I2C mode
     UCB0I2COA0 = 0x0068 | UCOAEN;       // Set slave address + enable
 
-    // setup ports
+    // Setup ports
     P1SEL1 &= ~BIT3;            // P1.3 SCL
     P1SEL0 |= BIT3;
 
@@ -30,8 +29,7 @@ void initI2C_slave(){
     UCB0CTLW0 &= ~UCSWRST;      // SW RESET OFF
 }
 
-void initTimerB0compare(){
-    // setup TB0
+void initTimerB0compare(){      // Setup TB0
     TB0CTL |= TBCLR;            // Clear TB0
     TB0CTL |= TBSSEL__SMCLK;    // Select SMCLK
     TB0CTL |= MC__UP;           // UP mode
@@ -231,11 +229,6 @@ int getCharCode(int in) {
         case 0x00: // 0
             ret =  0b00110000;
             break;
-        /*case 0x10: // .
-            ret = 0b00101110;
-            break;
-        */
-
         case 0x12:              // Locked = Y
             ret = 0b01011001;
             break;
@@ -264,7 +257,7 @@ int getCharCode(int in) {
             ret =  -1;
             break;
         default:
-            ret = 0;
+            ret = 0b00100000;   // Blank
             break;
     }
     return ret;
@@ -342,22 +335,25 @@ int main(void)
                 returnHome();
                 shiftCursorForward(7);
 
-                sendByte(code, 1);
+                sendByte(code, 1);              // Display locked state
+
+                shiftCursorForward(1);
+                sendByte(0b01001110, 1);        // Display N
+                sendByte(0b00111101, 1);        // Display :
+                code = getCharCode(packet[5]);
+                //sendByte(code, 1);
+
+
+
                 setCursorSecondRow();
                 shiftCursorForward(6);
                 code = getCharCode(packet[1]);
-                sendByte(code, 1);
+                sendByte(code, 1);              // Display level state
 
                 shiftCursorForward(2);
                 sendByte(0b01010110, 1);        // Display V
                 sendByte(0b00111101, 1);        // Display :
-                renderPacket(2, 4);
-
-
-                /*sendByte(getCharCode(packet[0]), 1);
-                setCursorSecondRow();
-                shiftCursorForward(6);
-                sendByte(getCharCode(packet[1]), 1)*/
+                renderPacket(2, 4);             // Display level value
 
             }
 
